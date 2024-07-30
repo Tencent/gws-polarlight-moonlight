@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GWS</title>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+      var gleam;
+      var gCB = null;
+      new QWebChannel(qt.webChannelTransport, function (channel) {
+        // Access the C++ API
+        gleam = channel.objects.gleamPost;
+        // Call a function on the C++ API
+      });
+
+      function CallJs(JSONObj) {
+        if (gCB != null) {
+          gCB(JSONObj);
+        }
+        return "0";
+      }
+
+      function SendConfig(config) {
+        gCB = function (result) {
+          // alert("result = " + JSON.stringify(result));
+          //console.log("Result from C++:", result);
+        };
+        gleam.sendMsg("config", JSON.stringify(config));
+      }
+
+      function logMessage(msg) {
+        gleam.log(JSON.stringify(msg));
+      }
+
+      function Setinfo() {
+        window.location.href = window.location.href;
+      }
+
+      function QueryWordBook(keyName, cb) {
+        const req = {
+          Type: keyName,
+        };
+        gCB = cb;
+        var jsonString = JSON.stringify(req);
+        //alert(jsonString);
+
+        gleam.sendMsg("wordbook", jsonString);
+      }
+    </script>
+    <script type="module" crossorigin src="./assets/index-D3G8a4iT.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CFshgabC.css">
+  </head>
+  <body>
+    <div id="app"></div>
+
+  </body>
+</html>

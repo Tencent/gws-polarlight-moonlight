@@ -1,0 +1,382 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Config Setting</title>
+	<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+        var gleam;
+        var gCB = null;
+        hostDisplays = [];
+        
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+            // Access the C++ API
+            gleam = channel.objects.gleamPost;
+            // Call a function on the C++ API
+        });
+        function CallJs(JSONObj) {
+            //alert("JSONObj = " + JSON.stringify(JSONObj) );
+            if (gCB != null){
+                gCB(JSONObj);
+            }
+            return "0";
+        }
+        function SendConfig(config){
+            gCB = 
+            function(result) {
+                //alert("result = "+JSON.stringify(result));
+                //console.log("Result from C++:", result);
+            };
+            gleam.sendMsg('config', config);
+        }
+        function QueryWordBook(keyName, cb) {
+            const req = {
+                Type: keyName
+            };
+            gCB = cb;
+            var jsonString = JSON.stringify(req);
+            //alert(jsonString);
+
+            gleam.sendMsg('wordbook', jsonString);
+        }
+
+        function createVirtual() {
+            const config = {
+                ActionType: 'CreateVirtualDisplay',
+                VirtualDisplay: document.getElementById('virtualDisplay').value
+            };
+            var jsonString = JSON.stringify(config);
+            //alert(jsonString);			
+			SendConfig(jsonString);
+        }
+
+        function attachToDesktop(adapterID_high, adapterID_low) {
+            const config = {
+                ActionType: 'AttachToDesktop',
+				AdapterIDHigh: adapterID_high,
+				AdapterIDLow: adapterID_low
+            };
+            var jsonString = JSON.stringify(config);
+            //alert(jsonString);			
+			SendConfig(jsonString);
+        }
+
+        
+        function confirmPrivacyModeChange() {
+            const config = {
+                ActionType: 'PrivacyModeChange',
+                PrivacyMode: document.querySelector('input[name="privacyMode"]:checked') ? document.querySelector('input[name="privacyMode"]:checked').value : "Not selected"
+            };
+            var jsonString = JSON.stringify(config);
+            //alert(jsonString);			
+			SendConfig(jsonString);
+        }
+    
+        function refreshHostDisplayList(){
+            QueryWordBook("HostDisplayList", 
+                function(result) {
+                    //alert("result = "+ JSON.stringify(result));
+                    hostDisplays = result;
+                    getHostDisplays();
+                }).catch(function(error) {
+                    console.error("Error calling C++ function:", error);
+                }                
+            ) 
+        }
+
+    </script>
+    <style>
+        .title-bar {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .buttons-area {
+            text-align: right;
+            margin-right: 5%; /* Adjust the margin as needed */
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .config-area, .encoder-area, .display-choose-area, .client-area {
+            width: 95%;
+            margin: auto;
+        }
+
+        .config-row, .display-row, .checkbox-row, .encoder-row {
+            display: flex;
+            flex-wrap: wrap;
+      
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+            .config-row .half-width {
+                width: 50%;
+            }
+
+        select, input[type="checkbox"], input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        .checkbox-label {
+            margin-right: 20px;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            margin-right: 20px;
+        }
+
+            .option-group label {
+                margin-right: 5px;
+            }
+
+        .checkbox-group-row {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+        }
+
+        .client-display-selectors {
+            display: flex;
+            flex-direction: column;
+            min-height: 150px; /* Adjust this value based on your needs */
+        }
+
+        .encoder-row .option-group {
+            flex: 1;
+        }
+
+        .align-left {
+            align-items: flex-start;
+        }
+        .area-head {
+            font-size: 28px; /* Increase font size */
+            font-weight: bold; /* Make text bold */
+            margin-top: 20px; /* Increase top margin */
+            margin-bottom: 20px; /* Increase bottom margin */
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="title-bar">Config Setting</div>
+    <div class="config-area">
+        <div class="area-head">Host:</div>
+        <div class="config-row align-left">
+            <div class="half-width">
+                <select id="channels">
+                    <option value="" disabled selected>Channels</option>
+                    <option value="channel1">Channel 1</option>
+                    <option value="channel2">Channel 2</option>
+                </select>
+            </div>
+            <div class="half-width">
+                <select id="profile">
+                    <option value="" disabled selected>Profile</option>
+                    <option value="profile1">Profile 1</option>
+                    <option value="profile2">Profile 2</option>
+                </select>
+            </div>
+        </div>
+        <div class="config-row align-left">
+            <div class="half-width">
+                <select id="quality">
+                    <option value="" disabled selected>Quality</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+            <div class="half-width">
+                <select id="virtualDisplay">
+                    <option value="" disabled selected>Virtual Display</option>
+                    <option value="0">No Virtual Display</option>
+                    <option value="1">Virtual Display Number: 1</option>
+                    <option value="2">Virtual Display Number: 2</option>
+                    <option value="3">Virtual Display Number: 3</option>
+                    <option value="4">Virtual Display Number: 4</option>
+                    <option value="5">Virtual Display Number: 5</option>
+                </select>
+                <button id="createVirtualButton" onclick="createVirtual()">Create</button>
+            </div>
+        </div>
+    </div>
+    <div class="encoder-area">
+        <div class="encoder-row">
+            <div class="option-group">
+                <label>Encoder:</label>
+                <div class="checkbox-group">
+                    <input type="radio" id="encoderH264" name="encoder" value="H.264">
+                    <label for="encoderH264">H.264</label>
+                    <input type="radio" id="encoderH265" name="encoder" value="H.265">
+                    <label for="encoderH265">H.265</label>
+                </div>
+            </div>
+            <div class="option-group">
+                <label>Rate Control:</label>
+                <div class="checkbox-group">
+                    <input type="radio" id="rateControlCBR" name="rateControl" value="CBR">
+                    <label for="rateControlCBR">CBR</label>
+                    <input type="radio" id="rateControlVBR" name="rateControl" value="VBR">
+                    <label for="rateControlVBR">VBR</label>
+                </div>
+            </div>
+            <div class="option-group">
+                <label>Privacy Mode:</label>
+                <button onclick="confirmPrivacyModeChange()">Confirm</button>                
+                <div class="checkbox-group">
+                    <input type="radio" id="privacyEnabled" name="privacyMode" value="Enabled">
+                    <label for="privacyEnabled">Enabled</label>
+                    <input type="radio" id="privacyDisabled" name="privacyMode" value="Disabled">
+                    <label for="privacyDisabled">Disabled</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="display-choose-area">
+        <div class="area-head">Display Choose Area:</div>
+        <button onclick="refreshHostDisplayList()">Refresh</button>
+        <div class="display-row align-left">
+            <div class="half-width" id="hostDisplayCheckboxes">
+                <!-- Host display checkboxes will be added here dynamically -->
+            </div>
+            <div class="half-width" id="hostDisplayOptions">
+                <!-- Host display options will be added here dynamically -->
+            </div>
+        </div>
+    </div>
+    <div class="client-area">
+        <div class="area-head">Client:</div>
+        <div class="config-row align-left">
+            <div class="half-width">
+                <div class="option-group">
+                    <label>Display Mode:</label>
+                    <div class="checkbox-group">
+                        <input type="radio" id="displayModeWindowed" name="displayMode" value="Windowed">
+                        <label for="displayModeWindowed">Windowed</label>
+                        <input type="radio" id="displayModeFullScreen" name="displayMode" value="Full Screen">
+                        <label for="displayModeFullScreen">Full Screen</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="buttons-area">
+        <button id="cancelButton">Cancel</button>
+        <button id="applyButton" onclick="applyConfig()">Apply</button>
+    </div>
+    <script>
+        const hostDisplayCheckboxes = document.getElementById('hostDisplayCheckboxes');
+        function getHostDisplays() {
+            while (hostDisplayCheckboxes.firstChild) {
+                hostDisplayCheckboxes.removeChild(hostDisplayCheckboxes.firstChild); 
+            }
+            hostDisplays.forEach((displayInfo, index) => {
+                displayName = displayInfo["Name"];
+                //alert ("display name =" + displayName);
+                const div = document.createElement('div');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `hostDisplay${index + 1}`;
+                checkbox.name = 'hostDisplays';
+                checkbox.value = `Display${index + 1}`;
+                checkbox.setAttribute('onchange', 'updateHostDisplayOptions(this)');
+                checkbox.setAttribute("data-display-id", displayName);
+                const label = document.createElement('label');
+                label.setAttribute('for', `hostDisplay${index + 1}`);
+                label.textContent = displayName;
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+
+				attached = displayInfo["Attached"];
+				if (attached != "yes") 
+				{
+					adapterID_high = displayInfo["AdapterIDHigh"];
+					adapterID_low = displayInfo["AdapterIDLow"];
+					var button = document.createElement('button');
+					button.setAttribute("data-adapterID-high", adapterID_high);
+					button.setAttribute("data-adapterID-low", adapterID_low);
+					button.textContent = 'AttachToDesktop';
+					button.addEventListener('click', function() {
+						adapterID_high = this.getAttribute("data-adapterID-high");
+						adapterID_low = this.getAttribute("data-adapterID-low");				
+						attachToDesktop(adapterID_high, adapterID_low) ;				
+					});
+					div.appendChild(button);
+				}				
+                hostDisplayCheckboxes.appendChild(div);
+            });
+        }
+
+        function updateHostDisplayOptions(checkbox) {
+            const hostDisplayOptions = document.getElementById("hostDisplayOptions");
+            const displayId = checkbox.value.replace(/\s+/g, ''); // Remove spaces for element ID
+            if (checkbox.checked) {
+                const containerDiv = document.createElement("div");
+                containerDiv.id = `optionsFor${displayId}`;
+                containerDiv.className = "config-row";
+                containerDiv.innerHTML = `
+                                <label>${checkbox.value}:</label>
+                                <select id="${displayId}">
+                                    <option value="" disabled selected>Client Display</option>
+                                    <option value="display1">Display 1</option>
+                                    <option value="display2">Display 2</option>
+                                </select>
+                                <select id="fpsFor${displayId}">
+                                    <option value="" disabled selected>FPS</option>
+                                    <option value="30">30</option>
+                                    <option value="60">60</option>
+                                    <option value="90">90</option>
+                                    <option value="144">144</option>
+                                </select>
+                                <!-- Add more options as needed -->
+                            `;
+                hostDisplayOptions.appendChild(containerDiv);
+            } else {
+                const existingDiv = document.getElementById(`optionsFor${displayId}`);
+                if (existingDiv) {
+                    existingDiv.remove();
+                }
+            }
+        }
+        function applyConfig() {
+            const config = {
+                ActionType: 'ConfigChange',
+                Channels: document.getElementById('channels').value,
+                Profile: document.getElementById('profile').value,
+                Quality: document.getElementById('quality').value,
+                VirtualDisplay: document.getElementById('virtualDisplay').value,
+                Encoder: document.querySelector('input[name="encoder"]:checked') ? document.querySelector('input[name="encoder"]:checked').value : "Not selected",
+                RateControl: document.querySelector('input[name="rateControl"]:checked') ? document.querySelector('input[name="rateControl"]:checked').value : "Not selected",
+                ClientDisplayMode: document.querySelector('input[name="displayMode"]:checked') ? document.querySelector('input[name="displayMode"]:checked').value : "Not selected",
+                DisplayChoose: Array.from(document.querySelectorAll('input[name="hostDisplays"]:checked')).map(checkbox => {
+                    const displayId = checkbox.value.replace(/\s+/g, '');
+                    const clientDisplayElement = document.getElementById(`${displayId}`);
+                    const fpsElement = document.getElementById(`fpsFor${displayId}`);
+                    nameRet = checkbox.getAttribute("data-display-id");
+                    //alert ("name to send:" + nameRet);
+                    return {
+                        Name: nameRet,
+                        ClientDisplay: clientDisplayElement ? clientDisplayElement.value : "Not selected",
+                        FPS: fpsElement ? fpsElement.value : "Not selected"
+                    };
+                })
+            };            
+            var jsonString = JSON.stringify(config);
+            //alert(jsonString);			
+			SendConfig(jsonString);
+        }
+
+    </script>
+</body>
+</html>
