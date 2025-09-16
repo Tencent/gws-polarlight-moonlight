@@ -1,0 +1,67 @@
+#!groovy
+pipeline {
+    agent {
+        node {
+            label "mac-builder-m2"
+        }
+    }
+
+    environment {
+        ROOTDIR = "/Users/l/workingdir/code/ces-gws-cli"
+    }
+
+    stages {
+        stage('Update cli') {
+            steps {
+                //modify and execute gleam build
+                dir("${ROOTDIR}") {
+                    script {
+                        sh "git checkout -- ."
+                        sh "git checkout main"
+                        sh "git pull"
+                    }
+                }  
+            }
+        }
+
+        stage('Package Gleam') {
+            steps {
+                //modify and execute gleam build
+                dir("${ROOTDIR}") {
+                    script {
+                        def scriptContent = readFile("gleambuild.sh")
+                        scriptContent = scriptContent.replaceAll("/Users/tangjie/Qt/6.5.2", "/Users/cesimac/Qt6.6/6.6.3")
+                        scriptContent = scriptContent.replaceAll("/Users/tangjie/Desktop/Polarlight-Moonlight", "${WORKSPACE}")
+                        writeFile file: "gleambuild.sh", text: scriptContent
+                        sh "chmod +x gleambuild.sh"
+                        sh "./gleambuild.sh"
+                    }
+                }
+                    
+            } // end of deploy steps 
+        }
+
+        stage('Upload') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus-user-cibot', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_TOKEN')]) {
+                    script {
+                        def releaseVersion = sh(script: "cat ${WORKSPACE}/version", returnStdout: true).trim()
+                        // 压缩文件
+                        sh """
+                            cd ${ROOTDIR}/macpackge/MacOS
+                            zip -r Gleam_${releaseVersion}.app.zip Gleam.app
+                        """
+                        
+                        // 上传app文件
+                        sh """
+                            curl -v -u ${NEXUS_USER}:${NEXUS_TOKEN} \\
+                                --upload-file ${ROOTDIR}/macpackge/MacOS/Gleam_${releaseVersion}.app.zip \\
+                                https://nexus.tencent-ces.com/repository/ces-gws/installer/releases/ces-gws-gleam/${releaseVersion}/Gleam_${releaseVersion}-arm64.app.zip
+                        """
+                    }
+                }
+            }
+        } // end of Upload stage
+
+    }
+}

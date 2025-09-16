@@ -1,0 +1,61 @@
+#!groovy
+pipeline {
+    agent {
+        node {
+            label "windows-ci-build"
+        }
+    }
+
+    stages {
+        stage('Prepare') {
+            steps {
+                script {
+                    echo "*************************************************************"
+                    bat '''
+                        git submodule update --init --recursive
+                        '''
+                    }
+                }
+            }// end of Prepare stage
+            
+        stage('Build') {
+            steps {
+                script {       
+                    bat '''
+                    moolightbuild.cmd %WORKSPACE%
+                    '''
+                }
+            }
+        } // end of Build stage
+
+        stage('Upload') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus-user-cibot', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_TOKEN')]) {
+                    script {
+                        bat '''
+                        set /P SnapShot_Version=<version
+                        IF %GIT_BRANCH% ==  master (
+                            curl -v -u %NEXUS_USER%:%NEXUS_TOKEN%  --upload-file %WORKSPACE%/package/Gleam/app/release/Gleam.exe https://nexus.tencent-ces.com/repository/ces-gws/installer/snapshots/ces-gws-gleam/%SnapShot_Version%-SNAPSHOT/Gleam_%SnapShot_Version%-SNAPSHOT.exe
+                        )
+                        '''
+                    }
+                }
+            }
+        } // end of Upload stage
+
+    }
+
+    post {
+        success {
+            script {
+                def gleamVersion = readFile('version').trim()
+                build job: 'CES-SoW/ces-gws-cli-package/main', 
+                    parameters: [
+                        string(name: 'GleamVersion', value: gleamVersion)
+                    ],
+                    propagate: false,
+                    wait: false
+            }
+        }
+    } // end of post
+}

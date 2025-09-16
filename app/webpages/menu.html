@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GWS</title>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="./common.js"></script>
+  </head>
+  <style>
+    .menu_box {
+      width: 52px;
+      height: 52px;
+      border-radius: 4px;
+      opacity: 0.5;
+      background: rgba(43, 41, 48, 0.9);
+      box-shadow: 0px 4px 8px 3px rgba(0, 0, 0, 0.15),
+        0px 1px 3px 0px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.5;
+    }
+    .menu_box:hover {
+      opacity: 1;
+    }
+    .img {
+      background: url("./images/menu.png") no-repeat 100% 100%;
+      background-size: contain;
+      width: 24px;
+      height: 24px;
+    }
+  </style>
+  <body>
+    <div class="menu_box" onclick="RefreshFun('menu')">
+      <div class="img"></div>
+    </div>
+  </body>
+</html>

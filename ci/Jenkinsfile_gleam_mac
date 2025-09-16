@@ -1,0 +1,70 @@
+#!groovy
+pipeline {
+    agent {
+        node {
+            label "mac-builder"
+        }
+    }
+
+    environment {
+        ROOTDIR = "/Users/cesimac/workingdir/workspace/ws-cli-mac-intel_CI_ci_mac_intel"
+    }
+
+    stages {
+        stage('Package Gleam') {
+            steps {
+                //modify and execute gleam build
+                dir("${ROOTDIR}") {
+                    script {
+                        sh "git checkout -- ."
+                        sh "git checkout main"
+                        sh "git pull"
+                        def scriptContent = readFile("gleambuild.sh")
+                        scriptContent = scriptContent.replaceAll("/Users/tangjie/Qt/6.5.2", "/Users/cesimac/Qt6.6/6.6.3")
+                        scriptContent = scriptContent.replaceAll("/Users/tangjie/Desktop/Polarlight-Moonlight", "${WORKSPACE}")
+                        writeFile file: "gleambuild.sh", text: scriptContent
+                        sh "chmod +x gleambuild.sh"
+                        sh "./gleambuild.sh"
+                    }
+                }
+                    
+            } // end of deploy steps 
+        }
+
+        stage('Upload') {
+            when {
+                branch 'master'
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus-user-cibot', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_TOKEN')]) {
+                    script {
+                        def snapshotVersion = sh(script: "cat ${WORKSPACE}/version", returnStdout: true).trim()
+
+                        // 压缩文件
+                        sh """
+                            cd ${ROOTDIR}/macpackge/MacOS
+                            zip -r Gleam_${snapshotVersion}-SNAPSHOT.app.zip Gleam.app
+                        """
+                        // 上传压缩文件
+                        sh """
+                            curl -v -u ${NEXUS_USER}:${NEXUS_TOKEN} \\
+                                --upload-file ${WORKSPACE}/../ws-cli-mac-intel_CI_ci_mac_intel/macpackge/MacOS/Gleam_${snapshotVersion}-SNAPSHOT.app.zip \\
+                                https://nexus.tencent-ces.com/repository/ces-gws/installer/snapshots/ces-gws-gleam/${snapshotVersion}-SNAPSHOT/Gleam_${snapshotVersion}-SNAPSHOT-x86_64.app.zip
+                        """
+                        
+                    }
+                }
+            }
+        } // end of Upload stage
+    }
+    
+    post {
+        success {
+            script {
+                build job: 'CES-SoW/ces-gws-cli-mac-intel_CI/main', 
+                    propagate: false,
+                    wait: false
+            }
+        }
+    } // end of post
+}

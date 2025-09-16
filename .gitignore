@@ -1,0 +1,12 @@
+*pro.user
+
+
+**/.vs/
+build/
+app/webpages/.DS_Store
+config.tests/*/.qmake.stash
+config.tests/*/Makefile
+.clang-format
+.vscode/
+.idea/
+.github/
